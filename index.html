@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jadwal Kerja Tahu</title>
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      background: #f4f7fc;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      color: #333;
+    }
+    .box {
+      background: #fff;
+      padding: 30px 40px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      max-width: 500px;
+      text-align: center;
+    }
+    h1 {
+      color: #333;
+      font-size: 24px;
+      margin-bottom: 20px;
+    }
+    h3 {
+      color: #555;
+      margin: 10px 0;
+    }
+    .time {
+      font-size: 18px;
+      font-weight: bold;
+      color: #4CAF50;
+    }
+    button {
+      margin-top: 20px;
+      padding: 12px 30px;
+      font-size: 16px;
+      border: none;
+      border-radius: 8px;
+      background-color: #4CAF50;
+      color: white;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+    button:disabled {
+      background-color: #999;
+      cursor: not-allowed;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    .countdown {
+      font-size: 18px;
+      color: #ff5722;
+      font-weight: bold;
+      margin-top: 10px;
+    }
+    .date {
+      font-size: 16px;
+      margin-top: 20px;
+      color: #777;
+    }
+    .list {
+      margin-top: 20px;
+      text-align: left;
+      font-size: 16px;
+    }
+    #barangList {
+      list-style-type: none;
+      padding-left: 0;
+    }
+    #barangList li {
+      margin: 5px 0;
+    }
+    .barang-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .barang-item button {
+      margin-left: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h1>Jadwal Kerja Tahu</h1>
+    <h3 id="tanggalHariIni" class="date"></h3>
+    <h3 id="totalGaji">Total Gaji: Rp0</h3>
+    <h3 id="sisaTarget">Sisa ke Rp8.000.000: Rp8.000.000</h3>
+    <h3 id="hariKerja">Hari Kerja: 0</h3>
+    <button id="btnKerja" onclick="kerjaHariIni()">Kerja Hari Ini</button>
+    <div id="clock" class="time"></div>
+    <div id="sisaHari" class="countdown"></div>
+
+    <!-- List Barang -->
+    <div id="listBarang" class="list">
+      <h3>List Barang:</h3>
+      <ul id="barangList">
+        <li class="barang-item">
+          <span>PC - Rp6.000.000</span>
+          <button onclick="buyBarang('pc', 6000000)">Beli</button>
+        </li>
+        <li class="barang-item">
+          <span>Monitor - Rp1.500.000</span>
+          <button onclick="buyBarang('monitor', 1500000)">Beli</button>
+        </li>
+        <li class="barang-item">
+          <span>Mouse + Keyboard + Headset - Rp500.000</span>
+          <button onclick="buyBarang('paket', 500000)">Beli</button>
+        </li>
+        <li class="barang-item">
+          <span>Meja - Rp500.000</span>
+          <button onclick="buyBarang('meja', 500000)">Beli</button>
+        </li>
+        <li class="barang-item">
+          <span>Kursi - Rp500.000</span>
+          <button onclick="buyBarang('kursi', 500000)">Beli</button>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <script>
+    const target = 8000000;
+    const gajiPerHari = 50000;
+    const hariLiburTetap = ['2025-06-06', '2025-06-30'];
+
+    // Load data dari localStorage
+    let data = JSON.parse(localStorage.getItem("dataKerja")) || {
+      total: 0,
+      hariKerja: 0,
+      lastKerja: ""
+    };
+
+    const formatRupiah = angka => angka.toLocaleString('id-ID', { style: 'currency', currency: 'IDR' });
+
+    const updateDisplay = () => {
+      // Update total gaji dan sisa target
+      document.getElementById("totalGaji").innerText = "Total Gaji: " + formatRupiah(data.total);
+      document.getElementById("sisaTarget").innerText = "Sisa ke Rp8.000.000: " + formatRupiah(target - data.total);
+      document.getElementById("hariKerja").innerText = "Hari Kerja: " + data.hariKerja;
+
+      const now = new Date();
+      const tanggalStr = now.toISOString().split('T')[0];
+      const tanggalText = now.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+      // Tanggal hari ini
+      document.getElementById("tanggalHariIni").innerText = "Hari ini: " + tanggalText;
+
+      const isLibur = hariLiburTetap.includes(tanggalStr);
+      const sudahKerjaHariIni = data.lastKerja === tanggalStr;
+
+      const btn = document.getElementById("btnKerja");
+      if (isLibur) {
+        btn.disabled = true;
+        btn.innerText = "Libur Tetap";
+      } else if (sudahKerjaHariIni) {
+        btn.disabled = true;
+        btn.innerText = "Sudah Kerja Hari Ini";
+      } else {
+        btn.disabled = false;
+        btn.innerText = "Kerja Hari Ini";
+      }
+
+      // Hitung sisa hari
+      const endDate = new Date(2025, 8, 1); // Tanggal target 8 juta
+      const diffTime = endDate - now;
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+      document.getElementById("sisaHari").innerText = `Sisa Hari: ${diffDays} Hari Lagi`;
+    };
+
+    const kerjaHariIni = () => {
+      const today = new Date().toISOString().split('T')[0];
+      if (data.lastKerja === today) return;
+
+      data.total += gajiPerHari;
+      data.hariKerja += 1;
+      data.lastKerja = today;
+
+      localStorage.setItem("dataKerja", JSON.stringify(data));
+      updateDisplay();
+    };
+
+    const updateClock = () => {
+      const now = new Date();
+      const hours = String(now.getHours()).padStart(2, '0');
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      const seconds = String(now.getSeconds()).padStart(2, '0');
+      document.getElementById("clock").innerText = `Waktu Saat Ini: ${hours}:${minutes}:${seconds}`;
+    };
+
+    const buyBarang = (barang, harga) => {
+      if (data.total >= harga) {
+        data.total -= harga;
+        target -= harga;
+        localStorage.setItem("dataKerja", JSON.stringify(data));
+        updateDisplay();
+        alert(`Berhasil membeli ${barang} seharga ${formatRupiah(harga)}`);
+      } else {
+        alert(`Gaji Anda tidak cukup untuk membeli ${barang}.`);
+      }
+    };
+
+    setInterval(updateClock, 1000); // Update jam setiap detik
+    updateDisplay(); // Initial display update
+  </script>
+</body>
+</html>
