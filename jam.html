@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Hitung Mundur & Keranjang</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 1rem;
+      background: #f9f9f9;
+    }
+    h1, h2 {
+      text-align: center;
+    }
+    #countdown {
+      font-size: 2rem;
+      text-align: center;
+      margin-bottom: 1rem;
+      color: #444;
+    }
+    #progres {
+      font-size: 1.2rem;
+      text-align: center;
+      margin: 1rem 0;
+      color: #222;
+    }
+    #resetBtn {
+      display: block;
+      margin: 0 auto 1.5rem auto;
+      padding: 0.5rem 1rem;
+      background: #dc3545;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .keranjang {
+      border: 2px solid #ccc;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      border-radius: 10px;
+      background: #fff;
+    }
+    .papan {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.5rem;
+      border-bottom: 1px solid #eee;
+    }
+    .papan:last-child {
+      border-bottom: none;
+    }
+    button {
+      padding: 0.3rem 0.8rem;
+      border: none;
+      border-radius: 6px;
+      background: #007bff;
+      color: white;
+      cursor: pointer;
+    }
+    button.selesai {
+      background: #28a745;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Hitung Mundur ke Jam 14:00</h1>
+  <div id="countdown">Loading...</div>
+  <div id="progres">Sisa papan: 98 | Sisa keranjang: 14</div>
+  <button id="resetBtn">Reset Semua Data</button>
+
+  <div id="semua-keranjang"></div>
+
+  <script>
+    const totalKeranjang = 14;
+    const papanPerKeranjang = 7;
+    const totalPapan = totalKeranjang * papanPerKeranjang;
+
+    function updateCountdown() {
+      const now = new Date();
+      const target = new Date();
+      target.setHours(14, 0, 0, 0);
+      if (now > target) target.setDate(target.getDate() + 1);
+      const diff = target - now;
+      const hours = Math.floor(diff / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+      document.getElementById('countdown').textContent =
+        `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    }
+
+    function getSelesaiData() {
+      const data = localStorage.getItem('selesaiPapan');
+      return data ? JSON.parse(data) : [];
+    }
+
+    function simpanData(data) {
+      localStorage.setItem('selesaiPapan', JSON.stringify(data));
+    }
+
+    function updateProgres() {
+      const selesai = getSelesaiData();
+      const sisaPapan = totalPapan - selesai.length;
+
+      let keranjangSelesai = 0;
+      for (let k = 1; k <= totalKeranjang; k++) {
+        let semuaAda = true;
+        for (let p = 1; p <= papanPerKeranjang; p++) {
+          if (!selesai.includes(`k${k}-p${p}`)) {
+            semuaAda = false;
+            break;
+          }
+        }
+        if (semuaAda) keranjangSelesai++;
+      }
+
+      const sisaKeranjang = totalKeranjang - keranjangSelesai;
+
+      document.getElementById('progres').textContent =
+        `Sisa papan: ${sisaPapan} | Sisa keranjang: ${sisaKeranjang}`;
+    }
+
+    function buatKeranjang() {
+      const container = document.getElementById('semua-keranjang');
+      const selesai = getSelesaiData();
+
+      for (let k = 1; k <= totalKeranjang; k++) {
+        const divKeranjang = document.createElement('div');
+        divKeranjang.className = 'keranjang';
+
+        const judul = document.createElement('h2');
+        judul.textContent = `Keranjang ${k}`;
+        divKeranjang.appendChild(judul);
+
+        for (let p = 1; p <= papanPerKeranjang; p++) {
+          const id = `k${k}-p${p}`;
+          const divPapan = document.createElement('div');
+          divPapan.className = 'papan';
+
+          const label = document.createElement('span');
+          label.textContent = `Papan ${p}`;
+
+          const tombol = document.createElement('button');
+          tombol.textContent = selesai.includes(id) ? 'Selesai' : 'Selesai?';
+          if (selesai.includes(id)) {
+            tombol.classList.add('selesai');
+            tombol.disabled = true;
+          }
+
+          tombol.addEventListener('click', () => {
+            tombol.textContent = 'Selesai';
+            tombol.classList.add('selesai');
+            tombol.disabled = true;
+            const newData = getSelesaiData();
+            newData.push(id);
+            simpanData(newData);
+            updateProgres();
+          });
+
+          divPapan.appendChild(label);
+          divPapan.appendChild(tombol);
+          divKeranjang.appendChild(divPapan);
+        }
+
+        container.appendChild(divKeranjang);
+      }
+    }
+
+    document.getElementById('resetBtn').addEventListener('click', () => {
+      if (confirm("Yakin ingin mereset semua data?")) {
+        localStorage.removeItem('selesaiPapan');
+        location.reload();
+      }
+    });
+
+    buatKeranjang();
+    updateCountdown();
+    updateProgres();
+    setInterval(updateCountdown, 1000);
+  </script>
+</body>
+</html>
